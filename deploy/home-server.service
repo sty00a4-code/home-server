@@ -1,0 +1,33 @@
+# Install with:
+#   sudo cp deploy/home-server.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now home-server
+#
+# Adjust User, WorkingDirectory and ExecStart if your username or install
+# path differ from the defaults below.
+
+[Unit]
+Description=home-server (personal file server)
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/home-server
+ExecStart=/home/pi/home-server/target/release/home-server
+Restart=on-failure
+RestartSec=2
+Environment=RUST_LOG=info
+# Uncomment once you're exposing this beyond your trusted LAN:
+# Environment=HOME_SERVER__AUTH__TOKEN=change-me
+
+# --- light sandboxing ---
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/pi/home-server/data
+
+[Install]
+WantedBy=multi-user.target

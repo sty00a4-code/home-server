@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>home-server</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="rack">
+    <header class="topbar">
+      <div class="brand">
+        <span class="led" aria-hidden="true"></span>
+        <span class="brand-name">home&#8209;server</span>
+      </div>
+      <div class="prompt" id="breadcrumb" aria-label="current directory">
+        <!-- filled by app.js -->
+      </div>
+      <div class="actions">
+        <button class="btn" id="new-folder-btn" type="button">New folder</button>
+        <label class="btn btn-primary" for="file-input">Upload</label>
+        <input id="file-input" type="file" multiple hidden />
+      </div>
+    </header>
+
+    <main
+      class="dropzone"
+      id="dropzone"
+      aria-label="file list, drop files here to upload"
+    >
+      <div class="dropzone-hint" id="dropzone-hint">drop files to upload</div>
+
+      <table class="listing" id="listing">
+        <thead>
+          <tr>
+            <th class="col-name">name</th>
+            <th class="col-size">size</th>
+            <th class="col-modified">modified</th>
+            <th class="col-actions"></th>
+          </tr>
+        </thead>
+        <tbody id="listing-body">
+          <!-- filled by app.js -->
+        </tbody>
+      </table>
+
+      <p class="empty-state" id="empty-state" hidden>nothing here yet — drop a file or add a folder</p>
+    </main>
+
+    <footer class="statusbar">
+      <span id="status-text">ready</span>
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

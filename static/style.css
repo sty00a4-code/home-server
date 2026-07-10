@@ -280,6 +280,25 @@ body {
   flex-shrink: 0;
 }
 
+.entry-name .thumb {
+  width: 1.6em;
+  height: 1.6em;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+  background: var(--panel-raised);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  border-color: var(--border);
+}
+
+.btn:disabled:hover {
+  border-color: var(--border);
+}
+
 .entry-name.is-dir .entry-icon {
   color: var(--accent);
 }

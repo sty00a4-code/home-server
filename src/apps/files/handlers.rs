@@ -86,16 +86,52 @@ pub async fn list_dir(
     }))
 }
 
+/// How the file's bytes should be presented to the browser.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Disposition {
+    /// `Content-Disposition: attachment` — browser always saves it.
+    Attachment,
+    /// `Content-Disposition: inline` — browser renders it if it can
+    /// (images, PDFs, HTML, ...), otherwise falls back to its own default
+    /// (usually still a download prompt).
+    Inline,
+}
+
+impl Disposition {
+    fn as_str(self) -> &'static str {
+        match self {
+            Disposition::Attachment => "attachment",
+            Disposition::Inline => "inline",
+        }
+    }
+}
+
+/// `GET /download` — always forces a save-as-attachment, for files *and*
+/// directories (a directory is zipped up on the fly first).
 pub async fn download_file(
     State(state): State<AppState>,
     Query(q): Query<PathQuery>,
 ) -> AppResult<Response> {
-    if q.path.is_empty() {
+    serve_path(state, q.path, Disposition::Attachment).await
+}
+
+/// `GET /view` — serves the file inline, for opening in a new tab or as an
+/// `<img>` thumbnail source. Only meaningful for files; a directory can't be
+/// usefully "viewed" so this rejects those and points at `/download`.
+pub async fn view_file(
+    State(state): State<AppState>,
+    Query(q): Query<PathQuery>,
+) -> AppResult<Response> {
+    serve_path(state, q.path, Disposition::Inline).await
+}
+
+async fn serve_path(state: AppState, path: String, disposition: Disposition) -> AppResult<Response> {
+    if path.is_empty() {
         return Err(AppError::BadRequest("path is required".into()));
     }
 
     let root = &state.settings.files.root_dir;
-    let target = resolve(root, &q.path)?;
+    let target = resolve(root, &path)?;
 
     let meta = fs::metadata(&target).await.map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
@@ -104,8 +140,14 @@ pub async fn download_file(
             AppError::Io(e)
         }
     })?;
+
     if meta.is_dir() {
-        return Err(AppError::BadRequest("cannot download a directory".into()));
+        if disposition == Disposition::Inline {
+            return Err(AppError::BadRequest(
+                "can't view a directory inline; use the download button to get a zip".into(),
+            ));
+        }
+        return download_directory_as_zip(target).await;
     }
 
     let file = fs::File::open(&target).await?;
@@ -125,12 +167,75 @@ pub async fn download_file(
     );
     headers.insert(
         header::CONTENT_DISPOSITION,
-        HeaderValue::from_str(&format!("attachment; filename=\"{filename}\""))
+        HeaderValue::from_str(&format!("{}; filename=\"{filename}\"", disposition.as_str()))
             .unwrap_or(HeaderValue::from_static("attachment")),
     );
     headers.insert(header::CONTENT_LENGTH, HeaderValue::from(meta.len()));
 
     Ok((headers, body).into_response())
+}
+
+/// Zips a directory in memory and returns it as an attachment response.
+///
+/// This buffers the whole archive in RAM before sending, which keeps the
+/// implementation simple and is perfectly fine for typical home-folder
+/// sizes — if you're regularly zipping tens of gigabytes at once, you'd be
+/// better off doing that directly on the Pi instead.
+async fn download_directory_as_zip(dir: std::path::PathBuf) -> AppResult<Response> {
+    let base_name = dir
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "folder".to_string());
+
+    let base_name_for_task = base_name.clone();
+    let bytes = tokio::task::spawn_blocking(move || build_zip(&dir, &base_name_for_task))
+        .await
+        .map_err(|e| AppError::Other(anyhow::anyhow!("zip task failed: {e}")))??;
+
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/zip"));
+    headers.insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_str(&format!("attachment; filename=\"{base_name}.zip\""))
+            .unwrap_or(HeaderValue::from_static("attachment")),
+    );
+    headers.insert(header::CONTENT_LENGTH, HeaderValue::from(bytes.len() as u64));
+
+    Ok((headers, Body::from(bytes)).into_response())
+}
+
+/// Synchronous, blocking zip build — run this inside `spawn_blocking`, never
+/// directly on an async task.
+fn build_zip(dir: &std::path::Path, base_name: &str) -> AppResult<Vec<u8>> {
+    let mut buffer = std::io::Cursor::new(Vec::new());
+    {
+        let mut zip = zip::ZipWriter::new(&mut buffer);
+        let options =
+            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+
+        for entry in walkdir::WalkDir::new(dir).into_iter() {
+            let entry =
+                entry.map_err(|e| AppError::Other(anyhow::anyhow!("walking directory: {e}")))?;
+            let rel = entry.path().strip_prefix(dir).unwrap_or(entry.path());
+            if rel.as_os_str().is_empty() {
+                continue; // skip the root directory entry itself
+            }
+            let entry_name = format!("{base_name}/{}", rel.to_string_lossy().replace('\\', "/"));
+
+            if entry.file_type().is_dir() {
+                zip.add_directory(&entry_name, options)
+                    .map_err(|e| AppError::Other(anyhow::anyhow!("zip: {e}")))?;
+            } else {
+                zip.start_file(&entry_name, options)
+                    .map_err(|e| AppError::Other(anyhow::anyhow!("zip: {e}")))?;
+                let mut f = std::fs::File::open(entry.path())?;
+                std::io::copy(&mut f, &mut zip)?;
+            }
+        }
+        zip.finish()
+            .map_err(|e| AppError::Other(anyhow::anyhow!("zip: {e}")))?;
+    }
+    Ok(buffer.into_inner())
 }
 
 pub async fn upload_file(

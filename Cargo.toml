@@ -41,6 +41,8 @@ thiserror = "1"
 
 # --- misc utilities used by the file app ---
 mime_guess = "2"
+walkdir = "2"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
 tempfile = "3"

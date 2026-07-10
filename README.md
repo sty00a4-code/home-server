@@ -60,7 +60,7 @@ reasonably current toolchain, so use `rustup`:
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source "$HOME/.cargo/env"
-rustc --version   # should be 1.80+; anything recent is fine
+rustc --version # should be 1.80+; anything recent is fine
 ```
 
 ### 2. Get the project onto the Pi
@@ -101,7 +101,7 @@ host = "0.0.0.0"
 port = 8080
 
 [files]
-root_dir = "./data"     # where your files actually live
+root_dir = "./data"  # where your files actually live
 max_upload_mb = 1024
 
 [auth]
@@ -129,7 +129,7 @@ sudo cp deploy/home-server.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now home-server
 sudo systemctl status home-server
-journalctl -u home-server -f      # tail the logs
+journalctl -u home-server -f # tail the logs
 ```
 
 Edit the `User`, `WorkingDirectory`, and `ExecStart` lines in the unit file

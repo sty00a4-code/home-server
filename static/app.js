@@ -3,6 +3,7 @@
 
 const API_BASE = "/api/files";
 const TOKEN_KEY = "home-server-token";
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp"]);
 
 let currentPath = ""; // relative path, "" = root
 let draggedEntryPath = null; // set while an internal row-drag is in progress
@@ -13,13 +14,28 @@ const emptyStateEl = document.getElementById("empty-state");
 const statusEl = document.getElementById("status-text");
 const dropzoneEl = document.getElementById("dropzone");
 const fileInputEl = document.getElementById("file-input");
+const folderInputEl = document.getElementById("folder-input");
 const newFolderBtn = document.getElementById("new-folder-btn");
+const upBtn = document.getElementById("up-btn");
 
 init();
 
 function init() {
   newFolderBtn.addEventListener("click", onNewFolder);
-  fileInputEl.addEventListener("change", () => uploadFiles(fileInputEl.files));
+  upBtn.addEventListener("click", () => {
+    if (!currentPath) return;
+    currentPath = parentOf(currentPath);
+    refresh();
+  });
+
+  fileInputEl.addEventListener("change", () => {
+    uploadEntries(entriesFromFileList(fileInputEl.files));
+    fileInputEl.value = "";
+  });
+  folderInputEl.addEventListener("change", () => {
+    uploadEntries(entriesFromFileList(folderInputEl.files));
+    folderInputEl.value = "";
+  });
 
   ["dragenter", "dragover"].forEach((evt) =>
     dropzoneEl.addEventListener(evt, (e) => {
@@ -27,13 +43,20 @@ function init() {
       if (!draggedEntryPath) dropzoneEl.classList.add("dragover");
     })
   );
-  ["dragleave", "drop"].forEach((evt) =>
+  ["dragleave"].forEach((evt) =>
     dropzoneEl.addEventListener(evt, (e) => {
       e.preventDefault();
-      if (evt === "drop" && !draggedEntryPath) uploadFiles(e.dataTransfer.files);
       dropzoneEl.classList.remove("dragover");
     })
   );
+  dropzoneEl.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    dropzoneEl.classList.remove("dragover");
+    if (draggedEntryPath) return; // an internal row/crumb drop already handled this
+
+    const entries = await collectFromDataTransfer(e.dataTransfer);
+    uploadEntries(entries);
+  });
 
   refresh();
 }
@@ -74,6 +97,7 @@ async function api(path, opts = {}) {
 
 async function refresh() {
   setStatus("loading…");
+  upBtn.disabled = !currentPath;
   try {
     const res = await api(`${API_BASE}?path=${encodeURIComponent(currentPath)}`);
     const data = await res.json();
@@ -194,6 +218,7 @@ function renderListing(entries) {
     const actionsTd = document.createElement("td");
     actionsTd.className = "col-actions";
     actionsTd.appendChild(renameButton(entry));
+    actionsTd.appendChild(downloadButton(entry));
     actionsTd.appendChild(deleteButton(entry));
     tr.appendChild(actionsTd);
 
@@ -206,22 +231,57 @@ function entryNameButton(entry) {
   btn.className = "entry-name" + (entry.is_dir ? " is-dir" : "");
   btn.type = "button";
 
-  const icon = document.createElement("span");
-  icon.className = "entry-icon";
-  icon.textContent = entry.is_dir ? "\u25B8" : "\u2013"; // ▸ or –
-  btn.appendChild(icon);
+  const childPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+  const ext = extOf(entry.name);
+
+  if (!entry.is_dir && IMAGE_EXTENSIONS.has(ext)) {
+    btn.appendChild(thumbnailImg(childPath));
+  } else {
+    const icon = document.createElement("span");
+    icon.className = "entry-icon";
+    icon.textContent = entry.is_dir ? "\u25B8" : "\u2013"; // ▸ or –
+    btn.appendChild(icon);
+  }
   btn.appendChild(document.createTextNode(entry.name));
 
   btn.addEventListener("click", () => {
-    const childPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
     if (entry.is_dir) {
       currentPath = childPath;
       refresh();
     } else {
-      downloadFile(childPath);
+      // Open in a new tab — the browser renders it if it can (images, PDF,
+      // HTML, ...) and otherwise falls back to its own download handling.
+      // The dedicated "download" button is the reliable way to force a save.
+      openInNewTab(childPath);
     }
   });
 
+  return btn;
+}
+
+function thumbnailImg(path) {
+  const img = document.createElement("img");
+  img.className = "thumb";
+  img.loading = "lazy";
+  img.alt = "";
+  resolveViewUrl(path)
+    .then((src) => {
+      img.src = src;
+    })
+    .catch(() => img.remove());
+  return img;
+}
+
+function downloadButton(entry) {
+  const btn = document.createElement("button");
+  btn.className = "row-action";
+  btn.type = "button";
+  btn.textContent = entry.is_dir ? "download zip" : "download";
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const childPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+    downloadFile(childPath);
+  });
   return btn;
 }
 
@@ -327,26 +387,158 @@ async function onNewFolder() {
   }
 }
 
-async function uploadFiles(fileList) {
-  if (!fileList || fileList.length === 0) return;
-  setStatus(`uploading ${fileList.length} file${fileList.length === 1 ? "" : "s"}…`);
+function openInNewTab(path) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const url = `${API_BASE}/view?path=${encodeURIComponent(path)}`;
 
-  const form = new FormData();
-  for (const file of fileList) form.append("file", file, file.name);
+  if (!token) {
+    window.open(url, "_blank", "noopener");
+    return;
+  }
 
-  try {
-    await api(`${API_BASE}/upload?path=${encodeURIComponent(currentPath)}`, {
-      method: "POST",
-      body: form,
-    });
-    fileInputEl.value = "";
-    refresh();
-  } catch (err) {
-    setStatus(`error: ${err.message}`, true);
+  // A plain window.open() can't attach an Authorization header, so when a
+  // token is set we fetch the bytes ourselves and open an object URL instead.
+  api(url)
+    .then((res) => res.blob())
+    .then((blob) => {
+      const objectUrl = URL.createObjectURL(blob);
+      window.open(objectUrl, "_blank", "noopener");
+      // Deliberately not revoked immediately — the new tab still needs it.
+    })
+    .catch((err) => setStatus(`error: ${err.message}`, true));
+}
+
+async function resolveViewUrl(path) {
+  const url = `${API_BASE}/view?path=${encodeURIComponent(path)}`;
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return url;
+  const res = await api(url);
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+/// --- bulk / folder upload ------------------------------------------------
+
+// Normalizes a plain <input type=file> FileList into {file, relPath} pairs.
+// When the input has `webkitdirectory` set, each File carries its path
+// within the chosen folder in `webkitRelativePath`.
+function entriesFromFileList(fileList) {
+  return Array.from(fileList).map((file) => ({
+    file,
+    relPath: file.webkitRelativePath || file.name,
+  }));
+}
+
+// Walks whatever was dropped on the page — individual files, or whole
+// folders — into a flat list of {file, relPath} pairs. Falls back to a
+// plain file list on browsers without the drag-and-drop directory API.
+async function collectFromDataTransfer(dataTransfer) {
+  const items = dataTransfer.items;
+  const out = [];
+
+  if (items && items.length > 0 && typeof items[0].webkitGetAsEntry === "function") {
+    const entries = Array.from(items)
+      .map((item) => item.webkitGetAsEntry && item.webkitGetAsEntry())
+      .filter(Boolean);
+
+    if (entries.length > 0) {
+      for (const entry of entries) {
+        await walkEntry(entry, "", out);
+      }
+      return out;
+    }
+  }
+
+  for (const file of dataTransfer.files) {
+    out.push({ file, relPath: file.name });
+  }
+  return out;
+}
+
+async function walkEntry(entry, basePath, out) {
+  if (entry.isFile) {
+    const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+    out.push({ file, relPath: basePath ? `${basePath}/${entry.name}` : entry.name });
+  } else if (entry.isDirectory) {
+    const nextBase = basePath ? `${basePath}/${entry.name}` : entry.name;
+    const children = await readAllEntries(entry.createReader());
+    for (const child of children) {
+      await walkEntry(child, nextBase, out);
+    }
   }
 }
 
+function readAllEntries(reader) {
+  // A single readEntries() call caps out at ~100 results in some browsers,
+  // so keep calling it until it comes back empty.
+  return new Promise((resolve, reject) => {
+    let all = [];
+    const readBatch = () => {
+      reader.readEntries((batch) => {
+        if (batch.length === 0) {
+          resolve(all);
+        } else {
+          all = all.concat(batch);
+          readBatch();
+        }
+      }, reject);
+    };
+    readBatch();
+  });
+}
+
+async function uploadEntries(entries) {
+  if (!entries || entries.length === 0) return;
+
+  // Group files by the destination directory they land in, so each folder
+  // of files becomes a single multipart upload instead of one request per
+  // file (the upload endpoint already `create_dir_all`s the destination).
+  const groups = new Map(); // destDir -> File[]
+  for (const { file, relPath } of entries) {
+    const parts = relPath.split("/");
+    parts.pop(); // drop the filename, keep just the subdirectory portion
+    const subDir = parts.join("/");
+    const destDir = subDir ? (currentPath ? `${currentPath}/${subDir}` : subDir) : currentPath;
+    if (!groups.has(destDir)) groups.set(destDir, []);
+    groups.get(destDir).push(file);
+  }
+
+  const destDirs = Array.from(groups.keys());
+  let done = 0;
+  setStatus(`uploading 0/${destDirs.length} folder${destDirs.length === 1 ? "" : "s"}…`);
+
+  for (const destDir of destDirs) {
+    const form = new FormData();
+    for (const file of groups.get(destDir)) form.append("file", file, file.name);
+
+    try {
+      await api(`${API_BASE}/upload?path=${encodeURIComponent(destDir)}`, {
+        method: "POST",
+        body: form,
+      });
+    } catch (err) {
+      setStatus(`error uploading to ${destDir || "~"}: ${err.message}`, true);
+      return;
+    }
+
+    done += 1;
+    setStatus(`uploading ${done}/${destDirs.length} folder${destDirs.length === 1 ? "" : "s"}…`);
+  }
+
+  refresh();
+}
+
 // --- formatting ---------------------------------------------------------
+
+function extOf(name) {
+  const idx = name.lastIndexOf(".");
+  return idx >= 0 ? name.slice(idx + 1).toLowerCase() : "";
+}
+
+function parentOf(path) {
+  const idx = path.lastIndexOf("/");
+  return idx >= 0 ? path.slice(0, idx) : "";
+}
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;

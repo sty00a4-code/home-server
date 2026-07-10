@@ -32,16 +32,24 @@ pub(crate) fn resolve(root: &Path, rel: &str) -> Result<PathBuf, AppError> {
 
     let candidate = root.join(rel_path);
 
-    // Canonicalize what we can. The candidate itself may not exist yet
-    // (e.g. an upload target), so fall back to checking its parent.
-    let check_target = if candidate.exists() {
-        candidate.clone()
-    } else {
-        candidate
-            .parent()
-            .map(Path::to_path_buf)
-            .unwrap_or_else(|| root.to_path_buf())
-    };
+    // Find the nearest ancestor of `candidate` that actually exists on disk
+    // (worst case, that's `root` itself) and canonicalize *that* to check it
+    // hasn't been symlinked outside the root. Anything below that ancestor
+    // doesn't exist yet, so it can't itself be a symlink escape — component
+    // validation above already ruled out `..` getting us there.
+    let mut check_target = candidate.clone();
+    loop {
+        if check_target.exists() {
+            break;
+        }
+        match check_target.parent() {
+            Some(parent) if parent != check_target => check_target = parent.to_path_buf(),
+            _ => {
+                check_target = root.to_path_buf();
+                break;
+            }
+        }
+    }
 
     let canonical_root = root
         .canonicalize()
@@ -63,6 +71,7 @@ pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/", get(handlers::list_dir))
         .route("/download", get(handlers::download_file))
+        .route("/view", get(handlers::view_file))
         .route("/upload", post(handlers::upload_file))
         .route("/mkdir", post(handlers::make_dir))
         .route("/move", post(handlers::move_entry))

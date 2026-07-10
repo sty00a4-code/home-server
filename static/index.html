@@ -17,7 +17,18 @@
         <!-- filled by app.js -->
       </div>
       <div class="actions">
+        <button class="btn" id="up-btn" type="button" title="Go up one folder">&#9650; Up</button>
         <button class="btn" id="new-folder-btn" type="button">New folder</button>
+        <label class="btn" for="folder-input">Upload folder</label>
+        <input
+          id="folder-input"
+          type="file"
+          webkitdirectory
+          mozdirectory
+          directory
+          multiple
+          hidden
+        />
         <label class="btn btn-primary" for="file-input">Upload</label>
         <input id="file-input" type="file" multiple hidden />
       </div>
@@ -26,9 +37,9 @@
     <main
       class="dropzone"
       id="dropzone"
-      aria-label="file list, drop files here to upload"
+      aria-label="file list, drop files or folders here to upload"
     >
-      <div class="dropzone-hint" id="dropzone-hint">drop files to upload</div>
+      <div class="dropzone-hint" id="dropzone-hint">drop files or folders to upload</div>
 
       <table class="listing" id="listing">
         <thead>

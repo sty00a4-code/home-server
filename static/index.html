@@ -1,68 +1,50 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>home-server</title>
-  <link rel="stylesheet" href="/style.css" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>home-server</title>
+    <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
-  <div class="rack">
-    <header class="topbar">
-      <div class="brand">
-        <span class="led" aria-hidden="true"></span>
-        <span class="brand-name">home&#8209;server</span>
-      </div>
-      <div class="prompt" id="breadcrumb" aria-label="current directory">
-        <!-- filled by app.js -->
-      </div>
-      <div class="actions">
-        <button class="btn" id="up-btn" type="button" title="Go up one folder">&#9650; Up</button>
-        <button class="btn" id="new-folder-btn" type="button">New folder</button>
-        <label class="btn" for="folder-input">Upload folder</label>
-        <input
-          id="folder-input"
-          type="file"
-          webkitdirectory
-          mozdirectory
-          directory
-          multiple
-          hidden
-        />
-        <label class="btn btn-primary" for="file-input">Upload</label>
-        <input id="file-input" type="file" multiple hidden />
-      </div>
-    </header>
+    <div class="rack">
+        <header class="topbar">
+            <div class="brand">
+                <span class="led" aria-hidden="true"></span>
+                <span class="brand-name">home&#8209;server</span>
+            </div>
+            <div class="tagline">your apps, on your hardware</div>
+        </header>
 
-    <main
-      class="dropzone"
-      id="dropzone"
-      aria-label="file list, drop files or folders here to upload"
-    >
-      <div class="dropzone-hint" id="dropzone-hint">drop files or folders to upload</div>
+        <main class="cards">
+            <a class="card" href="/files/">
+                <div class="card-icon" aria-hidden="true">&#9638;</div>
+                <div class="card-body">
+                    <h2>Files</h2>
+                    <p>Browse, upload, move, and download files stored on this server.</p>
+                    <div class="card-stat" id="files-stat">…</div>
+                </div>
+            </a>
 
-      <table class="listing" id="listing">
-        <thead>
-          <tr>
-            <th class="col-name">name</th>
-            <th class="col-size">size</th>
-            <th class="col-modified">modified</th>
-            <th class="col-actions"></th>
-          </tr>
-        </thead>
-        <tbody id="listing-body">
-          <!-- filled by app.js -->
-        </tbody>
-      </table>
+            <a class="card" href="/api/studies/summary">
+                <div class="card-icon" aria-hidden="true">&#9636;</div>
+                <div class="card-body">
+                    <h2>Studies</h2>
+                    <p>Modules, Klausur results, and Leistungspunkte — Leistungsübersicht.</p>
+                    <div class="card-stat" id="studies-stat">…</div>
+                    <div class="card-note">no dedicated page yet — links to the raw API</div>
+                </div>
+            </a>
+        </main>
 
-      <p class="empty-state" id="empty-state" hidden>nothing here yet — drop a file or add a folder</p>
-    </main>
+        <footer class="statusbar">
+            <span id="status-text">ready</span>
+        </footer>
+    </div>
 
-    <footer class="statusbar">
-      <span id="status-text">ready</span>
-    </footer>
-  </div>
-
-  <script src="/app.js"></script>
+    <script src="app.js"></script>
 </body>
+
 </html>

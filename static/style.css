@@ -332,6 +332,70 @@ body {
   padding: 3rem 1rem;
 }
 
+/* studues */
+.cards {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  padding: 1.5rem;
+  align-content: start;
+}
+
+.card {
+  display: flex;
+  gap: 0.9rem;
+  padding: 1.1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s ease;
+}
+
+.card:hover {
+  border-color: var(--accent-dim, var(--accent));
+}
+
+.card-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--panel-raised);
+  color: var(--accent);
+  font-size: 1.1rem;
+}
+
+.card-body h2 {
+  margin: 0 0 0.3rem;
+  font-size: 1.05rem;
+}
+
+.card-body p {
+  margin: 0 0 0.6rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.card-stat {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--accent);
+}
+
+.card-note {
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
 /* --- status bar --- */
 
 .statusbar {

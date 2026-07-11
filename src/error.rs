@@ -28,6 +28,9 @@ pub enum AppError {
     Io(#[from] std::io::Error),
 
     #[error(transparent)]
+    Db(#[from] rusqlite::Error),
+
+    #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
 
@@ -46,6 +49,16 @@ impl IntoResponse for AppError {
             }
             AppError::Io(_) | AppError::Other(_) => {
                 tracing::error!(error = %self, "internal error");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal server error".to_string(),
+                )
+            }
+            AppError::Db(rusqlite::Error::QueryReturnedNoRows) => {
+                (StatusCode::NOT_FOUND, "not found".to_string())
+            }
+            AppError::Db(e) => {
+                tracing::error!(error = %e, "database error");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "internal server error".to_string(),

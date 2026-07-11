@@ -13,6 +13,7 @@ pub struct Settings {
     pub server: ServerSettings,
     pub files: FilesSettings,
     pub auth: AuthSettings,
+    pub studies: StudiesSettings,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -38,6 +39,12 @@ pub struct AuthSettings {
     pub token: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct StudiesSettings {
+    /// Path to the SQLite database file for the studies/progress tracker.
+    pub db_path: PathBuf,
+}
+
 impl Settings {
     pub fn load() -> anyhow::Result<Self> {
         let cfg = config::Config::builder()
@@ -46,6 +53,7 @@ impl Settings {
             .set_default("files.root_dir", "./data")?
             .set_default("files.max_upload_mb", 1024)?
             .set_default::<_, Option<String>>("auth.token", None)?
+            .set_default("studies.db_path", "./data/studies.db")?
             // Optional file, entirely fine if it doesn't exist.
             .add_source(config::File::with_name("config/default").required(false))
             // Env vars win over everything, e.g.:

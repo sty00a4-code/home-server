@@ -1,4 +1,5 @@
 pub mod files;
+pub mod studies;
 
 use crate::state::AppState;
 use axum::Router;
@@ -17,9 +18,10 @@ use axum::Router;
 /// That's the entire contract — each app owns its own routes, handlers and
 /// storage layout, and doesn't need to know the others exist.
 pub fn register(router: Router<AppState>, state: AppState) -> Router<AppState> {
-    router.nest("/api/files", files::router(state.clone()))
+    router
+        .nest("/api/files", files::router(state.clone()))
+        .nest("/api/studies", studies::router(state.clone()))
 
     // Future apps get added the same way, e.g.:
     // .nest("/api/notes", notes::router(state.clone()))
-    // .nest("/api/photos", photos::router(state.clone()))
 }

@@ -1,50 +1,84 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>home-server</title>
-    <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>home-server</title>
+  <link rel="stylesheet" href="/style.css" />
 </head>
-
 <body>
-    <div class="rack">
-        <header class="topbar">
-            <div class="brand">
-                <span class="led" aria-hidden="true"></span>
-                <span class="brand-name">home&#8209;server</span>
-            </div>
-            <div class="tagline">your apps, on your hardware</div>
-        </header>
+  <div class="rack">
+    <header class="topbar">
+      <div class="brand">
+        <span class="led" aria-hidden="true"></span>
+        <span class="brand-name">home&#8209;server</span>
+      </div>
+      <span class="tagline">personal apps, running on your own hardware</span>
+    </header>
 
-        <main class="cards">
-            <a class="card" href="/files/">
-                <div class="card-icon" aria-hidden="true">&#9638;</div>
-                <div class="card-body">
-                    <h2>Files</h2>
-                    <p>Browse, upload, move, and download files stored on this server.</p>
-                    <div class="card-stat" id="files-stat">…</div>
-                </div>
-            </a>
+    <main class="cards" id="cards">
+      <a class="card" href="/files/">
+        <span class="card-icon" aria-hidden="true">&#128193;</span>
+        <div class="card-body">
+          <h2>Files</h2>
+          <p>Browse, upload, move, and share files stored on this server.</p>
+          <span class="card-stat" id="files-stat">&hellip;</span>
+        </div>
+      </a>
 
-            <a class="card" href="/api/studies/summary">
-                <div class="card-icon" aria-hidden="true">&#9636;</div>
-                <div class="card-body">
-                    <h2>Studies</h2>
-                    <p>Modules, Klausur results, and Leistungspunkte — Leistungsübersicht.</p>
-                    <div class="card-stat" id="studies-stat">…</div>
-                    <div class="card-note">no dedicated page yet — links to the raw API</div>
-                </div>
-            </a>
-        </main>
+      <a class="card" href="/studies/">
+        <span class="card-icon" aria-hidden="true">&#127891;</span>
+        <div class="card-body">
+          <h2>Studies</h2>
+          <p>Leistungs&uuml;bersicht &mdash; modules, exam results, and LP progress.</p>
+          <span class="card-stat" id="studies-stat">&hellip;</span>
+        </div>
+      </a>
 
-        <footer class="statusbar">
-            <span id="status-text">ready</span>
-        </footer>
-    </div>
+      <!--
+        Adding another app? Add its router in src/apps/mod.rs, give it its
+        own static/<name>/ folder, then add a card here linking to /<name>/.
+      -->
+    </main>
 
-    <script src="app.js"></script>
+    <footer class="statusbar">
+      <span id="status-text">ready</span>
+    </footer>
+  </div>
+
+  <script>
+    // Small best-effort live stats on each card. Failures are silent — a
+    // freshly-set-up server with no auth token configured yet, or one where
+    // a request fails, should still show a working dashboard.
+    async function apiGet(path) {
+      const res = await fetch(path);
+      if (!res.ok) throw new Error(res.statusText);
+      return res.json();
+    }
+
+    apiGet("/api/files?path=")
+      .then((data) => {
+        const n = data.entries.length;
+        document.getElementById("files-stat").textContent =
+          `${n} item${n === 1 ? "" : "s"} at root`;
+      })
+      .catch(() => {
+        document.getElementById("files-stat").textContent = "";
+      });
+
+    apiGet("/api/studies/summary")
+      .then((rows) => {
+        const el = document.getElementById("studies-stat");
+        if (rows.length === 0) {
+          el.textContent = "no study program set up yet";
+          return;
+        }
+        const primary = rows[0];
+        el.textContent = `${primary.lp_earned} / ${primary.lp_required} LP earned`;
+      })
+      .catch(() => {
+        document.getElementById("studies-stat").textContent = "";
+      });
+  </script>
 </body>
-
 </html>

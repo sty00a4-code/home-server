@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>home-server / studies</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="rack">
+    <header class="topbar">
+      <div class="brand-row">
+        <a href="/" class="brand" title="Back to home">
+          <span class="led" aria-hidden="true"></span>
+          <span class="brand-name">home&#8209;server</span>
+        </a>
+        <span class="app-label">/ studies</span>
+      </div>
+      <span class="tagline">Leistungs&uuml;bersicht</span>
+    </header>
+
+    <main class="content">
+      <section class="cards" id="summary-cards">
+        <!-- filled by app.js -->
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Modules</h2>
+          <div class="filters">
+            <select class="inline-select" id="filter-program" aria-label="Filter by study program">
+              <option value="">all programs</option>
+            </select>
+            <select class="inline-select" id="filter-status" aria-label="Filter by status">
+              <option value="">all statuses</option>
+              <option value="geplant">geplant</option>
+              <option value="angemeldet">angemeldet</option>
+              <option value="laufend">laufend</option>
+              <option value="bestanden">bestanden</option>
+              <option value="nicht_bestanden">nicht bestanden</option>
+              <option value="abgebrochen">abgebrochen</option>
+            </select>
+          </div>
+        </div>
+
+        <table class="listing" id="modules-table">
+          <thead>
+            <tr>
+              <th>title</th>
+              <th>code</th>
+              <th>LP</th>
+              <th>kind</th>
+              <th>status</th>
+              <th>semester</th>
+              <th>grade</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="modules-body">
+            <!-- filled by app.js -->
+          </tbody>
+        </table>
+        <p class="empty-state" id="modules-empty" hidden>
+          no modules yet — add a study program below, then add your first module
+        </p>
+
+        <details class="add-form">
+          <summary>+ Add module</summary>
+          <form id="module-form">
+            <div class="field">
+              <label for="m-program">Study program</label>
+              <select id="m-program" required></select>
+            </div>
+            <div class="field">
+              <label for="m-title">Title</label>
+              <input id="m-title" type="text" required placeholder="Grundlagen der Programmierung" />
+            </div>
+            <div class="field">
+              <label for="m-code">Module code</label>
+              <input id="m-code" type="text" placeholder="B.Inf.1101" />
+            </div>
+            <div class="field">
+              <label for="m-lp">LP</label>
+              <input id="m-lp" type="number" step="0.5" min="0" required />
+            </div>
+            <div class="field">
+              <label for="m-kind">Kind</label>
+              <select id="m-kind">
+                <option value="Pflicht">Pflicht</option>
+                <option value="Wahlpflicht">Wahlpflicht</option>
+                <option value="Wahl">Wahl</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="m-status">Status</label>
+              <select id="m-status">
+                <option value="geplant">geplant</option>
+                <option value="angemeldet">angemeldet</option>
+                <option value="laufend">laufend</option>
+                <option value="bestanden">bestanden</option>
+                <option value="nicht_bestanden">nicht bestanden</option>
+                <option value="abgebrochen">abgebrochen</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="m-semester">Planned/current semester</label>
+              <select id="m-semester"></select>
+            </div>
+            <div class="field wide">
+              <button class="btn btn-primary" type="submit">Add module</button>
+            </div>
+          </form>
+        </details>
+      </section>
+
+      <section class="panel">
+        <details>
+          <summary>
+            <h2 class="inline">Study programs &amp; semesters</h2>
+          </summary>
+
+          <div class="setup-grid">
+            <div>
+              <h3>Study programs</h3>
+              <table class="listing" id="programs-table">
+                <thead>
+                  <tr>
+                    <th>name</th>
+                    <th>degree</th>
+                    <th>PO</th>
+                    <th>LP required</th>
+                    <th>primary</th>
+                  </tr>
+                </thead>
+                <tbody id="programs-body"></tbody>
+              </table>
+              <form id="program-form" class="inline-form">
+                <input id="p-name" type="text" placeholder="Informatik B.Sc." required />
+                <select id="p-degree">
+                  <option value="Bachelor">Bachelor</option>
+                  <option value="Master">Master</option>
+                  <option value="Staatsexamen">Staatsexamen</option>
+                  <option value="Sonstiges">Sonstiges</option>
+                </select>
+                <input id="p-po" type="text" placeholder="PO 2021" />
+                <input id="p-lp" type="number" min="0" placeholder="LP required" required />
+                <label class="checkbox"><input id="p-primary" type="checkbox" /> primary</label>
+                <button class="btn" type="submit">Add program</button>
+              </form>
+            </div>
+
+            <div>
+              <h3>Semesters</h3>
+              <table class="listing" id="semesters-table">
+                <thead>
+                  <tr>
+                    <th>label</th>
+                    <th>term</th>
+                    <th>year</th>
+                  </tr>
+                </thead>
+                <tbody id="semesters-body"></tbody>
+              </table>
+              <form id="semester-form" class="inline-form">
+                <input id="s-label" type="text" placeholder="WiSe 2026/27" required />
+                <select id="s-term">
+                  <option value="WiSe">WiSe</option>
+                  <option value="SoSe">SoSe</option>
+                </select>
+                <input id="s-year" type="number" placeholder="start year" required />
+                <input id="s-order" type="number" placeholder="sort order" required />
+                <button class="btn" type="submit">Add semester</button>
+              </form>
+            </div>
+          </div>
+        </details>
+      </section>
+    </main>
+
+    <footer class="statusbar">
+      <span id="status-text">ready</span>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

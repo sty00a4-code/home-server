@@ -3,15 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>home-server</title>
-  <link rel="stylesheet" href="/style.css" />
+  <title>home-server / files</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="rack">
     <header class="topbar">
-      <div class="brand">
-        <span class="led" aria-hidden="true"></span>
-        <span class="brand-name">home&#8209;server</span>
+      <div class="brand-row">
+        <a href="/" class="brand" title="Back to home">
+          <span class="led" aria-hidden="true"></span>
+          <span class="brand-name">home&#8209;server</span>
+        </a>
+        <span class="app-label">/ files</span>
       </div>
       <div class="prompt" id="breadcrumb" aria-label="current directory">
         <!-- filled by app.js -->
@@ -63,6 +66,6 @@
     </footer>
   </div>
 
-  <script src="/app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

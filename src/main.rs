@@ -44,19 +44,17 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .merge(api_router)
-        // Each app with a web UI gets its own static subtree; the dashboard
-        // at "/" (static/index.html) is what links out to them.
-        .nest_service("/files", ServeDir::new("static/files"))
+        // Each app with a web UI gets its own folder under static/; the
+        // dashboard at "/" (static/index.html) links out to them. One
+        // fallback_service handles all of static/, so every app's paths
+        // behave consistently (including the trailing-slash redirect).
         .fallback_service(ServeDir::new("static"))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
         .with_state(state.clone());
 
-    let addr: SocketAddr = format!(
-        "{}:{}",
-        state.settings.server.host, state.settings.server.port
-    )
-    .parse()?;
+    let addr: SocketAddr = format!("{}:{}", state.settings.server.host, state.settings.server.port)
+        .parse()?;
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("listening on http://{addr}");
 

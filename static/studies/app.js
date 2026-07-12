@@ -13,10 +13,26 @@ const STATUS_LABELS = {
   abgebrochen: "abgebrochen",
 };
 
+const EXAM_TYPES = [
+  "Klausur",
+  "Hausarbeit",
+  "Muendliche_Pruefung",
+  "Portfolio",
+  "Projektbericht",
+  "Referat",
+  "Praktikum",
+  "Abschlussarbeit",
+  "Sonstige",
+];
+
+const MODULE_KINDS = ["Pflicht", "Wahlpflicht", "Wahl"];
+
 let semesters = [];
 let programs = [];
 let modules = [];
 let openExamRows = new Set(); // module ids whose exam sub-row is expanded
+let editingModuleId = null; // module id whose edit form is open, or null
+let editingExamId = null; // exam id whose row is in edit mode, or null
 
 const summaryCardsEl = document.getElementById("summary-cards");
 const filterProgramEl = document.getElementById("filter-program");
@@ -76,6 +92,45 @@ async function api(path, opts = {}) {
   if (res.status === 204) return null;
   const text = await res.text();
   return text ? JSON.parse(text) : null;
+}
+
+// --- date helpers ---------------------------------------------------------
+//
+// The API stores exam dates as ISO (yyyy-mm-dd) so they sort correctly, but
+// every date the person actually types or reads is dd/mm/yyyy — a plain
+// text input rather than <input type="date"> so we're not at the mercy of
+// the browser's locale (which is what showed mm/dd/yyyy before).
+
+function isoToDmy(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  return `${d}/${m}/${y}`;
+}
+
+// Returns an ISO date string, or null for an empty input. Throws if the
+// text doesn't look like a valid dd/mm/yyyy date.
+function dmyToIso(dmy) {
+  const trimmed = dmy.trim();
+  if (!trimmed) return null;
+
+  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) {
+    throw new Error(`"${trimmed}" isn't a dd/mm/yyyy date`);
+  }
+  const [, dStr, mStr, yStr] = match;
+  const d = parseInt(dStr, 10);
+  const m = parseInt(mStr, 10);
+  const y = parseInt(yStr, 10);
+
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const valid =
+    date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+  if (!valid) {
+    throw new Error(`"${trimmed}" isn't a valid date`);
+  }
+
+  return `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
 // --- data loading -----------------------------------------------------
@@ -206,7 +261,9 @@ function renderModules() {
 
   for (const m of visible) {
     modulesBodyEl.appendChild(moduleRow(m));
-    if (openExamRows.has(m.id)) {
+    if (editingModuleId === m.id) {
+      modulesBodyEl.appendChild(moduleEditRow(m));
+    } else if (openExamRows.has(m.id)) {
       modulesBodyEl.appendChild(examSubRow(m));
       loadExamsInto(m.id);
     }
@@ -228,6 +285,7 @@ function moduleRow(m) {
   nameBtn.type = "button";
   nameBtn.textContent = (openExamRows.has(m.id) ? "▾ " : "▸ ") + m.title;
   nameBtn.addEventListener("click", () => {
+    if (editingModuleId === m.id) editingModuleId = null;
     if (openExamRows.has(m.id)) openExamRows.delete(m.id);
     else openExamRows.add(m.id);
     renderModules();
@@ -289,6 +347,18 @@ function moduleRow(m) {
 
   const actionsTd = document.createElement("td");
   actionsTd.className = "col-actions";
+
+  const editBtn = document.createElement("button");
+  editBtn.className = "row-action";
+  editBtn.type = "button";
+  editBtn.textContent = editingModuleId === m.id ? "close" : "edit";
+  editBtn.addEventListener("click", () => {
+    openExamRows.delete(m.id);
+    editingModuleId = editingModuleId === m.id ? null : m.id;
+    renderModules();
+  });
+  actionsTd.appendChild(editBtn);
+
   const delBtn = document.createElement("button");
   delBtn.className = "row-action danger";
   delBtn.type = "button";
@@ -304,6 +374,122 @@ function moduleRow(m) {
   });
   actionsTd.appendChild(delBtn);
   tr.appendChild(actionsTd);
+
+  return tr;
+}
+
+// Full edit form for a module — every field, not just the inline
+// status/grade quick-edit in the row above.
+function moduleEditRow(m) {
+  const tr = document.createElement("tr");
+  tr.className = "edit-subrow";
+  const td = document.createElement("td");
+  td.colSpan = 8;
+
+  const programOptions = programs
+    .map((p) => `<option value="${p.id}" ${p.id === m.study_program_id ? "selected" : ""}>${escapeHtml(p.name)}</option>`)
+    .join("");
+  const kindOptions = MODULE_KINDS.map(
+    (k) => `<option value="${k}" ${k === m.module_kind ? "selected" : ""}>${k}</option>`
+  ).join("");
+  const statusOptions = Object.entries(STATUS_LABELS)
+    .map(([v, label]) => `<option value="${v}" ${v === m.status ? "selected" : ""}>${label}</option>`)
+    .join("");
+  const semesterOptions = (selectedId) =>
+    `<option value="">— none —</option>` +
+    semesters
+      .map((s) => `<option value="${s.id}" ${s.id === selectedId ? "selected" : ""}>${escapeHtml(s.label)}</option>`)
+      .join("");
+
+  td.innerHTML = `
+    <form class="edit-form" id="module-edit-form-${m.id}">
+      <div class="field">
+        <label>Study program</label>
+        <select class="em-program">${programOptions}</select>
+      </div>
+      <div class="field">
+        <label>Title</label>
+        <input class="em-title" type="text" value="${escapeAttr(m.title)}" required />
+      </div>
+      <div class="field">
+        <label>Module code</label>
+        <input class="em-code" type="text" value="${escapeAttr(m.module_code || "")}" />
+      </div>
+      <div class="field">
+        <label>LP</label>
+        <input class="em-lp" type="number" step="0.5" min="0" value="${m.lp}" required />
+      </div>
+      <div class="field">
+        <label>Kind</label>
+        <select class="em-kind">${kindOptions}</select>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select class="em-status">${statusOptions}</select>
+      </div>
+      <div class="field">
+        <label>Planned semester</label>
+        <select class="em-planned-semester">${semesterOptions(m.planned_semester_id)}</select>
+      </div>
+      <div class="field">
+        <label>Completed semester</label>
+        <select class="em-completed-semester">${semesterOptions(m.completed_semester_id)}</select>
+      </div>
+      <div class="field">
+        <label>Final grade</label>
+        <input class="em-grade" type="number" step="0.1" min="1" max="5" value="${m.final_grade ?? ""}" />
+      </div>
+      <div class="field">
+        <label>Module coordinator</label>
+        <input class="em-coordinator" type="text" value="${escapeAttr(m.module_coordinator || "")}" />
+      </div>
+      <div class="field wide">
+        <label>Notes</label>
+        <input class="em-notes" type="text" value="${escapeAttr(m.notes || "")}" />
+      </div>
+      <div class="field wide edit-actions">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <button class="btn" type="button" id="module-cancel-${m.id}">Cancel</button>
+      </div>
+    </form>
+  `;
+  tr.appendChild(td);
+
+  td.querySelector(`#module-cancel-${m.id}`).addEventListener("click", () => {
+    editingModuleId = null;
+    renderModules();
+  });
+
+  td.querySelector("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const grade = td.querySelector(".em-grade").value;
+    const plannedSem = td.querySelector(".em-planned-semester").value;
+    const completedSem = td.querySelector(".em-completed-semester").value;
+
+    const payload = {
+      study_program_id: parseInt(td.querySelector(".em-program").value, 10),
+      po_area_id: m.po_area_id,
+      module_code: td.querySelector(".em-code").value || null,
+      title: td.querySelector(".em-title").value,
+      lp: parseFloat(td.querySelector(".em-lp").value),
+      module_kind: td.querySelector(".em-kind").value,
+      recommended_semester: m.recommended_semester,
+      status: td.querySelector(".em-status").value,
+      planned_semester_id: plannedSem ? parseInt(plannedSem, 10) : null,
+      completed_semester_id: completedSem ? parseInt(completedSem, 10) : null,
+      final_grade: grade === "" ? null : parseFloat(grade),
+      module_coordinator: td.querySelector(".em-coordinator").value || null,
+      notes: td.querySelector(".em-notes").value || null,
+    };
+
+    try {
+      await api(`${API_BASE}/modules/${m.id}`, { method: "PUT", body: JSON.stringify(payload) });
+      editingModuleId = null;
+      await refreshAll();
+    } catch (err) {
+      setStatus(`error: ${err.message}`, true);
+    }
+  });
 
   return tr;
 }
@@ -335,6 +521,23 @@ async function updateModule(m, patch) {
 
 // --- exam sub-panel -----------------------------------------------------
 
+function examTypeOptions(selected) {
+  return EXAM_TYPES.map((t) => `<option value="${t}" ${t === selected ? "selected" : ""}>${t}</option>`).join("");
+}
+
+function passedOptions(selected) {
+  // selected: true | false | null
+  const opts = [
+    { value: "", label: "ausstehend" },
+    { value: "true", label: "bestanden" },
+    { value: "false", label: "nicht bestanden" },
+  ];
+  const selectedValue = selected === true ? "true" : selected === false ? "false" : "";
+  return opts
+    .map((o) => `<option value="${o.value}" ${o.value === selectedValue ? "selected" : ""}>${o.label}</option>`)
+    .join("");
+}
+
 function examSubRow(m) {
   const tr = document.createElement("tr");
   tr.className = "exam-subrow";
@@ -349,20 +552,12 @@ function examSubRow(m) {
         <tbody id="exams-body-${m.id}"><tr><td colspan="7">loading…</td></tr></tbody>
       </table>
       <form class="inline-form exam-form" data-module-id="${m.id}">
-        <select class="e-type">
-          <option>Klausur</option>
-          <option>Hausarbeit</option>
-          <option>Muendliche_Pruefung</option>
-          <option>Portfolio</option>
-          <option>Projektbericht</option>
-          <option>Referat</option>
-          <option>Abschlussarbeit</option>
-          <option>Sonstige</option>
-        </select>
+        <select class="e-type">${examTypeOptions("Klausur")}</select>
         <select class="e-semester">${semesters.map((s) => `<option value="${s.id}">${escapeHtml(s.label)}</option>`).join("")}</select>
         <input class="e-attempt" type="number" min="1" max="3" value="1" title="attempt number" />
-        <input class="e-date" type="date" />
+        <input class="e-date" type="text" placeholder="dd/mm/yyyy" pattern="\\d{1,2}/\\d{1,2}/\\d{4}" />
         <input class="e-grade" type="number" step="0.1" min="1" max="5" placeholder="grade" />
+        <select class="e-passed">${passedOptions(null)}</select>
         <label class="checkbox"><input class="e-registered" type="checkbox" /> registered</label>
         <button class="btn" type="submit">+ Add exam</button>
       </form>
@@ -385,49 +580,147 @@ async function loadExamsInto(moduleId) {
       return;
     }
     for (const ex of exams) {
-      const tr = document.createElement("tr");
-      const passedLabel = ex.passed === true ? "✓" : ex.passed === false ? "✗" : "—";
-      tr.innerHTML = `
-        <td>${escapeHtml(ex.exam_type)}</td>
-        <td>${escapeHtml(semesterLabel(ex.semester_id))}</td>
-        <td class="col-size">${ex.attempt_number}</td>
-        <td class="col-size">${escapeHtml(ex.exam_date || "—")}</td>
-        <td class="col-size">${ex.grade ?? "—"}</td>
-        <td class="col-size">${passedLabel}</td>
-        <td class="col-actions"></td>
-      `;
-      const delBtn = document.createElement("button");
-      delBtn.className = "row-action danger";
-      delBtn.type = "button";
-      delBtn.textContent = "delete";
-      delBtn.addEventListener("click", async () => {
-        try {
-          await api(`${API_BASE}/exams/${ex.id}`, { method: "DELETE" });
-          await loadExamsInto(moduleId);
-        } catch (err) {
-          setStatus(`error: ${err.message}`, true);
-        }
-      });
-      tr.querySelector(".col-actions").appendChild(delBtn);
-      body.appendChild(tr);
+      body.appendChild(
+        editingExamId === ex.id ? examEditRow(ex, moduleId) : examRow(ex, moduleId)
+      );
     }
   } catch (err) {
     body.innerHTML = `<tr><td colspan="7">error: ${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
+function examRow(ex, moduleId) {
+  const tr = document.createElement("tr");
+  const passedLabel = ex.passed === true ? "✓" : ex.passed === false ? "✗" : "—";
+  tr.innerHTML = `
+    <td>${escapeHtml(ex.exam_type)}</td>
+    <td>${escapeHtml(semesterLabel(ex.semester_id))}</td>
+    <td class="col-size">${ex.attempt_number}</td>
+    <td class="col-size">${escapeHtml(isoToDmy(ex.exam_date)) || "—"}</td>
+    <td class="col-size">${ex.grade ?? "—"}</td>
+    <td class="col-size">${passedLabel}</td>
+    <td class="col-actions"></td>
+  `;
+
+  const actionsTd = tr.querySelector(".col-actions");
+
+  const editBtn = document.createElement("button");
+  editBtn.className = "row-action";
+  editBtn.type = "button";
+  editBtn.textContent = "edit";
+  editBtn.addEventListener("click", () => {
+    editingExamId = ex.id;
+    loadExamsInto(moduleId);
+  });
+  actionsTd.appendChild(editBtn);
+
+  const delBtn = document.createElement("button");
+  delBtn.className = "row-action danger";
+  delBtn.type = "button";
+  delBtn.textContent = "delete";
+  delBtn.addEventListener("click", async () => {
+    try {
+      await api(`${API_BASE}/exams/${ex.id}`, { method: "DELETE" });
+      await loadExamsInto(moduleId);
+    } catch (err) {
+      setStatus(`error: ${err.message}`, true);
+    }
+  });
+  actionsTd.appendChild(delBtn);
+
+  return tr;
+}
+
+function examEditRow(ex, moduleId) {
+  const tr = document.createElement("tr");
+  tr.className = "exam-edit-row";
+  const td = document.createElement("td");
+  td.colSpan = 7;
+
+  const semesterOptions = semesters
+    .map((s) => `<option value="${s.id}" ${s.id === ex.semester_id ? "selected" : ""}>${escapeHtml(s.label)}</option>`)
+    .join("");
+
+  td.innerHTML = `
+    <form class="inline-form exam-edit-form">
+      <select class="ee-type">${examTypeOptions(ex.exam_type)}</select>
+      <select class="ee-semester">${semesterOptions}</select>
+      <input class="ee-attempt" type="number" min="1" max="3" value="${ex.attempt_number}" title="attempt number" />
+      <input class="ee-date" type="text" placeholder="dd/mm/yyyy" pattern="\\d{1,2}/\\d{1,2}/\\d{4}" value="${escapeAttr(isoToDmy(ex.exam_date))}" />
+      <input class="ee-grade" type="number" step="0.1" min="1" max="5" placeholder="grade" value="${ex.grade ?? ""}" />
+      <select class="ee-passed">${passedOptions(ex.passed)}</select>
+      <label class="checkbox"><input class="ee-registered" type="checkbox" ${ex.registered ? "checked" : ""} /> registered</label>
+      <button class="btn btn-primary" type="submit">Save</button>
+      <button class="btn" type="button" id="exam-cancel-${ex.id}">Cancel</button>
+    </form>
+  `;
+  tr.appendChild(td);
+
+  td.querySelector(`#exam-cancel-${ex.id}`).addEventListener("click", () => {
+    editingExamId = null;
+    loadExamsInto(moduleId);
+  });
+
+  td.querySelector("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    let isoDate;
+    try {
+      isoDate = dmyToIso(td.querySelector(".ee-date").value);
+    } catch (err) {
+      setStatus(`error: ${err.message}`, true);
+      return;
+    }
+    const passedRaw = td.querySelector(".ee-passed").value;
+    const gradeRaw = td.querySelector(".ee-grade").value;
+
+    const payload = {
+      module_id: moduleId,
+      semester_id: parseInt(td.querySelector(".ee-semester").value, 10),
+      exam_type: td.querySelector(".ee-type").value,
+      attempt_number: parseInt(td.querySelector(".ee-attempt").value, 10) || 1,
+      exam_date: isoDate,
+      registered: td.querySelector(".ee-registered").checked,
+      grade: gradeRaw === "" ? null : parseFloat(gradeRaw),
+      passed: passedRaw === "" ? null : passedRaw === "true",
+    };
+
+    try {
+      await api(`${API_BASE}/exams/${ex.id}`, { method: "PUT", body: JSON.stringify(payload) });
+      editingExamId = null;
+      await loadExamsInto(moduleId);
+      await renderSummary();
+    } catch (err) {
+      setStatus(`error: ${err.message}`, true);
+    }
+  });
+
+  return tr;
+}
+
 async function onAddExam(e, moduleId) {
   e.preventDefault();
   const form = e.target;
+
+  let isoDate;
+  try {
+    isoDate = dmyToIso(form.querySelector(".e-date").value);
+  } catch (err) {
+    setStatus(`error: ${err.message}`, true);
+    return;
+  }
+
+  const passedRaw = form.querySelector(".e-passed").value;
+  const gradeRaw = form.querySelector(".e-grade").value;
+
   const payload = {
     module_id: moduleId,
     semester_id: parseInt(form.querySelector(".e-semester").value, 10),
     exam_type: form.querySelector(".e-type").value,
     attempt_number: parseInt(form.querySelector(".e-attempt").value, 10) || 1,
-    exam_date: form.querySelector(".e-date").value || null,
+    exam_date: isoDate,
     registered: form.querySelector(".e-registered").checked,
-    grade: form.querySelector(".e-grade").value ? parseFloat(form.querySelector(".e-grade").value) : null,
-    passed: null,
+    grade: gradeRaw === "" ? null : parseFloat(gradeRaw),
+    passed: passedRaw === "" ? null : passedRaw === "true",
   };
   try {
     await api(`${API_BASE}/exams`, { method: "POST", body: JSON.stringify(payload) });
@@ -507,6 +800,12 @@ function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str ?? "";
   return div.innerHTML;
+}
+
+// Like escapeHtml, but also safe to drop inside a double-quoted HTML
+// attribute (escapes quotes too).
+function escapeAttr(str) {
+  return escapeHtml(str).replaceAll('"', "&quot;");
 }
 
 function setStatus(text, isError = false) {

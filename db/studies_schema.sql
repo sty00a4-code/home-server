@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS exams (
     semester_id      INTEGER NOT NULL REFERENCES semesters(id) ON DELETE RESTRICT,
     exam_type        TEXT NOT NULL CHECK (exam_type IN (
                           'Klausur', 'Hausarbeit', 'Muendliche_Pruefung', 'Portfolio',
-                          'Projektbericht', 'Referat', 'Abschlussarbeit', 'Sonstige'
+                          'Projektbericht', 'Referat', 'Praktikum', 'Abschlussarbeit', 'Sonstige'
                       )),
     attempt_number   INTEGER NOT NULL DEFAULT 1 CHECK (attempt_number BETWEEN 1 AND 3),
                           -- Erstversuch = 1; JGU allows at most 2 Wiederholungsversuche

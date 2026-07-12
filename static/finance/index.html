@@ -1,11 +1,13 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>home-server / finance</title>
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
   <div class="rack">
     <header class="topbar">
@@ -34,24 +36,6 @@
           </div>
         </div>
 
-        <table class="listing" id="transactions-table">
-          <thead>
-            <tr>
-              <th>date</th>
-              <th>description</th>
-              <th>sent to</th>
-              <th>category</th>
-              <th>type</th>
-              <th>amount</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="transactions-body">
-            <!-- filled by app.js -->
-          </tbody>
-        </table>
-        <p class="empty-state" id="transactions-empty" hidden>no transactions logged yet</p>
-
         <details class="add-form" open>
           <summary>+ Add transaction</summary>
           <form id="transaction-form">
@@ -73,27 +57,61 @@
             </div>
             <div class="field">
               <label for="t-payment-type">Payment type</label>
-              <select id="t-payment-type"><option value="">—</option></select>
+              <select id="t-payment-type">
+                <option value="">—</option>
+              </select>
             </div>
             <div class="field">
               <label for="t-category">Category</label>
-              <select id="t-category"><option value="">—</option></select>
+              <select id="t-category">
+                <option value="">—</option>
+              </select>
             </div>
             <div class="field wide">
               <button class="btn btn-primary" type="submit">Add transaction</button>
             </div>
           </form>
         </details>
+
+        <table class="listing" id="transactions-table">
+          <thead>
+            <tr>
+              <th>date</th>
+              <th>description</th>
+              <th>sent to</th>
+              <th>category</th>
+              <th>type</th>
+              <th>amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="transactions-body">
+            <!-- filled by app.js -->
+          </tbody>
+        </table>
+        <p class="empty-state" id="transactions-empty" hidden>no transactions logged yet</p>
+
       </section>
 
       <section class="panel">
         <details>
-          <summary><h2 class="inline">Scheduled transactions</h2></summary>
-          <p class="hint">Monthly income, subscriptions, rent — these get pushed into the table automatically once due, even if the server was off when they became due.</p>
+          <summary>
+            <h2 class="inline">Scheduled transactions</h2>
+          </summary>
+          <p class="hint">Monthly income, subscriptions, rent — these get pushed into the table automatically once due,
+            even if the server was off when they became due.</p>
 
           <table class="listing" id="scheduled-table">
             <thead>
-              <tr><th>description</th><th>amount</th><th>day</th><th>from</th><th>until</th><th>active</th><th></th></tr>
+              <tr>
+                <th>description</th>
+                <th>amount</th>
+                <th>day</th>
+                <th>from</th>
+                <th>until</th>
+                <th>active</th>
+                <th></th>
+              </tr>
             </thead>
             <tbody id="scheduled-body"></tbody>
           </table>
@@ -104,8 +122,12 @@
             <input id="sc-day" type="number" min="1" max="31" placeholder="day of month" required />
             <input id="sc-start" type="text" placeholder="starts dd/mm/yyyy" required />
             <input id="sc-end" type="text" placeholder="ends dd/mm/yyyy (optional)" />
-            <select id="sc-payment-type"><option value="">payment type —</option></select>
-            <select id="sc-category"><option value="">category —</option></select>
+            <select id="sc-payment-type">
+              <option value="">payment type —</option>
+            </select>
+            <select id="sc-category">
+              <option value="">category —</option>
+            </select>
             <button class="btn" type="submit">+ Add schedule</button>
           </form>
         </details>
@@ -113,18 +135,27 @@
 
       <section class="panel">
         <details>
-          <summary><h2 class="inline">Categories &amp; payment types</h2></summary>
+          <summary>
+            <h2 class="inline">Categories &amp; payment types</h2>
+          </summary>
 
           <div class="setup-grid">
             <div>
               <h3>Categories</h3>
               <table class="listing" id="categories-table">
-                <thead><tr><th>name</th><th></th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>name</th>
+                    <th></th>
+                  </tr>
+                </thead>
                 <tbody id="categories-body"></tbody>
               </table>
               <form id="category-form" class="inline-form">
                 <input id="c-name" type="text" placeholder="Lebensmittel" required />
-                <select id="c-parent"><option value="">no parent (top-level)</option></select>
+                <select id="c-parent">
+                  <option value="">no parent (top-level)</option>
+                </select>
                 <button class="btn" type="submit">Add category</button>
               </form>
             </div>
@@ -132,7 +163,12 @@
             <div>
               <h3>Payment types</h3>
               <table class="listing" id="payment-types-table">
-                <thead><tr><th>name</th><th></th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>name</th>
+                    <th></th>
+                  </tr>
+                </thead>
                 <tbody id="payment-types-body"></tbody>
               </table>
               <form id="payment-type-form" class="inline-form">
@@ -152,4 +188,5 @@
 
   <script src="app.js"></script>
 </body>
+
 </html>

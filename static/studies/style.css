@@ -1,24 +1,24 @@
-/* Same palette as static/style.css and static/files/style.css — keep these
-   in sync if you tweak the theme (duplicated rather than shared so each
-   app stays self-contained). */
 :root {
-  --bg: #14171c;
-  --panel: #1b1f26;
-  --panel-raised: #212630;
-  --border: #2a2f3a;
-  --text: #e6e8eb;
-  --muted: #8b94a3;
-  --accent: #e8a33d;
-  --accent-dim: #6b5230;
-  --danger: #d9695f;
-  --ok: #6fae76;
+  --bg: #1c1414;
+  --panel: #261b1b;
+  --panel-raised: #302121;
+  --border: #3a2a2a;
+  --text: #ebe6e6;
+  --muted: #a38b8b;
+  --accent: #b69340;
+  --accent-dim: #6b5330;
+  --danger: #d95f5f;
+  --ok: #7aae6f;
   --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
   --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html, body {
+html,
+body {
   margin: 0;
   min-height: 100%;
   background: var(--bg);
@@ -59,7 +59,9 @@ html, body {
   color: var(--text);
 }
 
-.brand:hover .brand-name { color: var(--accent); }
+.brand:hover .brand-name {
+  color: var(--accent);
+}
 
 .app-label {
   color: var(--muted);
@@ -83,8 +85,15 @@ html, body {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
 }
 
 .content {
@@ -159,7 +168,8 @@ html, body {
   margin-bottom: 0.75rem;
 }
 
-.panel h2, .panel h2.inline {
+.panel h2,
+.panel h2.inline {
   margin: 0;
   font-size: 1.05rem;
   display: inline;
@@ -169,7 +179,10 @@ html, body {
   cursor: pointer;
   color: var(--muted);
 }
-.panel summary:hover { color: var(--text); }
+
+.panel summary:hover {
+  color: var(--text);
+}
 
 .filters {
   display: flex;
@@ -195,14 +208,34 @@ html, body {
   border-bottom: 1px solid var(--border);
 }
 
-.listing tbody tr { border-bottom: 1px solid var(--border); }
-.listing tbody tr:hover { background: var(--panel-raised); }
-.listing td { padding: 0.45rem 0.5rem; vertical-align: middle; }
+.listing tbody tr {
+  border-bottom: 1px solid var(--border);
+}
 
-.listing.nested { font-size: 0.82rem; margin-bottom: 0.6rem; }
+.listing tbody tr:hover {
+  background: var(--panel-raised);
+}
 
-.col-size { font-family: var(--mono); color: var(--muted); white-space: nowrap; }
-.col-actions { text-align: right; white-space: nowrap; }
+.listing td {
+  padding: 0.45rem 0.5rem;
+  vertical-align: middle;
+}
+
+.listing.nested {
+  font-size: 0.82rem;
+  margin-bottom: 0.6rem;
+}
+
+.col-size {
+  font-family: var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.col-actions {
+  text-align: right;
+  white-space: nowrap;
+}
 
 .row-action {
   font-size: 0.78rem;
@@ -212,28 +245,54 @@ html, body {
   cursor: pointer;
   padding: 0.2rem 0.4rem;
 }
-.row-action:hover { color: var(--text); }
-.row-action.danger:hover { color: var(--danger); }
+
+.row-action:hover {
+  color: var(--text);
+}
+
+.row-action.danger:hover {
+  color: var(--danger);
+}
 
 .exams-toggle {
   color: var(--text);
   padding: 0;
   font-weight: 500;
 }
-.exams-toggle:hover { color: var(--accent); }
 
-.exam-subrow td { background: var(--bg); padding: 0.75rem 1rem; }
-.exam-panel { display: flex; flex-direction: column; gap: 0.6rem; }
+.exams-toggle:hover {
+  color: var(--accent);
+}
+
+.exam-subrow td {
+  background: var(--bg);
+  padding: 0.75rem 1rem;
+}
+
+.exam-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
 
 /* status-tinted rows */
-tr.status-bestanden td:first-child { border-left: 2px solid var(--ok); }
-tr.status-nicht_bestanden td:first-child { border-left: 2px solid var(--danger); }
+tr.status-bestanden td:first-child {
+  border-left: 2px solid var(--ok);
+}
+
+tr.status-nicht_bestanden td:first-child {
+  border-left: 2px solid var(--danger);
+}
+
 tr.status-laufend td:first-child,
-tr.status-angemeldet td:first-child { border-left: 2px solid var(--accent); }
+tr.status-angemeldet td:first-child {
+  border-left: 2px solid var(--accent);
+}
 
 /* --- inline editable cells --- */
 
-.inline-select, .inline-input {
+.inline-select,
+.inline-input {
   background: var(--panel-raised);
   color: var(--text);
   border: 1px solid var(--border);
@@ -243,7 +302,9 @@ tr.status-angemeldet td:first-child { border-left: 2px solid var(--accent); }
   font-size: 0.82rem;
 }
 
-.inline-input { width: 4.5rem; }
+.inline-input {
+  width: 4.5rem;
+}
 
 /* --- forms --- */
 
@@ -266,12 +327,25 @@ tr.status-angemeldet td:first-child { border-left: 2px solid var(--accent); }
   margin-top: 0.75rem;
 }
 
-.field { display: flex; flex-direction: column; gap: 0.3rem; }
-.field.wide { grid-column: 1 / -1; }
-.field label { font-size: 0.75rem; color: var(--muted); }
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
 
-.field input, .field select,
-.inline-form input, .inline-form select {
+.field.wide {
+  grid-column: 1 / -1;
+}
+
+.field label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.field input,
+.field select,
+.inline-form input,
+.inline-form select {
   background: var(--panel-raised);
   color: var(--text);
   border: 1px solid var(--border);
@@ -324,7 +398,10 @@ tr.status-angemeldet td:first-child { border-left: 2px solid var(--accent); }
   cursor: pointer;
   white-space: nowrap;
 }
-.btn:hover { border-color: var(--accent-dim); }
+
+.btn:hover {
+  border-color: var(--accent-dim);
+}
 
 .btn-primary {
   background: var(--accent);
@@ -332,7 +409,10 @@ tr.status-angemeldet td:first-child { border-left: 2px solid var(--accent); }
   border-color: var(--accent);
   font-weight: 600;
 }
-.btn-primary:hover { filter: brightness(1.08); }
+
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
 
 .empty-state {
   text-align: center;

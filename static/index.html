@@ -35,6 +35,15 @@
         </div>
       </a>
 
+      <a class="card" href="/finance/">
+        <span class="card-icon" aria-hidden="true">&#128176;</span>
+        <div class="card-body">
+          <h2>Finance</h2>
+          <p>Transactions, recurring income &amp; bills, and a daily spending budget.</p>
+          <span class="card-stat" id="finance-stat">&hellip;</span>
+        </div>
+      </a>
+
       <!--
         Adding another app? Add its router in src/apps/mod.rs, give it its
         own static/<name>/ folder, then add a card here linking to /<name>/.
@@ -78,6 +87,15 @@
       })
       .catch(() => {
         document.getElementById("studies-stat").textContent = "";
+      });
+
+    apiGet("/api/finance/summary")
+      .then((s) => {
+        document.getElementById("finance-stat").textContent =
+          `${s.daily_allowance.toFixed(2)} € / day left this month`;
+      })
+      .catch(() => {
+        document.getElementById("finance-stat").textContent = "";
       });
   </script>
 </body>

@@ -44,8 +44,9 @@ mime_guess = "2"
 walkdir = "2"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 
-# --- database, used by the studies app ---
+# --- database, used by the studies and finance apps ---
 rusqlite = { version = "0.31", features = ["bundled"] }
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [dev-dependencies]
 tempfile = "3"

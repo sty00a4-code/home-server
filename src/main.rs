@@ -31,8 +31,40 @@ async fn main() -> anyhow::Result<()> {
     let studies_db = apps::studies::open_and_migrate(&settings.studies.db_path)?;
     tracing::info!(db_path = %settings.studies.db_path.display(), "studies database ready");
 
+    let finance_db = apps::finance::open_and_migrate(&settings.finance.db_path)?;
+    tracing::info!(db_path = %settings.finance.db_path.display(), "finance database ready");
+
     let max_upload_bytes = (settings.files.max_upload_mb * 1024 * 1024) as usize;
-    let state = AppState::new(settings, studies_db);
+    let schedule_check_interval_hours = settings.finance.schedule_check_interval_hours;
+    let state = AppState::new(settings, studies_db, finance_db);
+
+    // Catch up on any recurring transactions (income, subscriptions, ...)
+    // that fell due while the server was off, then keep checking
+    // periodically for the rest of the run — see apps/finance/schedule.rs.
+    match apps::finance::run_catch_up(&state).await {
+        Ok(n) if n > 0 => tracing::info!(count = n, "recorded due recurring transactions"),
+        Ok(_) => {}
+        Err(e) => tracing::error!(error = %e, "recurring transaction catch-up failed"),
+    }
+    {
+        let state = state.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+                schedule_check_interval_hours * 3600,
+            ));
+            interval.tick().await; // first tick fires immediately; skip it, we just ran catch-up above
+            loop {
+                interval.tick().await;
+                match apps::finance::run_catch_up(&state).await {
+                    Ok(n) if n > 0 => {
+                        tracing::info!(count = n, "recorded due recurring transactions")
+                    }
+                    Ok(_) => {}
+                    Err(e) => tracing::error!(error = %e, "recurring transaction catch-up failed"),
+                }
+            }
+        });
+    }
 
     // All API apps get mounted here — see apps/mod.rs for how to add more.
     let api_router = apps::register(Router::new(), state.clone())
@@ -53,8 +85,11 @@ async fn main() -> anyhow::Result<()> {
         .layer(TraceLayer::new_for_http())
         .with_state(state.clone());
 
-    let addr: SocketAddr = format!("{}:{}", state.settings.server.host, state.settings.server.port)
-        .parse()?;
+    let addr: SocketAddr = format!(
+        "{}:{}",
+        state.settings.server.host, state.settings.server.port
+    )
+    .parse()?;
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("listening on http://{addr}");
 

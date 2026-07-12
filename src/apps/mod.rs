@@ -1,4 +1,5 @@
 pub mod files;
+pub mod finance;
 pub mod studies;
 
 use crate::state::AppState;
@@ -21,6 +22,7 @@ pub fn register(router: Router<AppState>, state: AppState) -> Router<AppState> {
     router
         .nest("/api/files", files::router(state.clone()))
         .nest("/api/studies", studies::router(state.clone()))
+        .nest("/api/finance", finance::router(state.clone()))
 
     // Future apps get added the same way, e.g.:
     // .nest("/api/notes", notes::router(state.clone()))

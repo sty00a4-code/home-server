@@ -91,7 +91,11 @@ fn clamp_to_month(year: i32, month: u32, day: u32) -> NaiveDate {
 }
 
 fn days_in_month(year: i32, month: u32) -> u32 {
-    let (next_year, next_month) = if month == 12 { (year + 1, 1) } else { (year, month + 1) };
+    let (next_year, next_month) = if month == 12 {
+        (year + 1, 1)
+    } else {
+        (year, month + 1)
+    };
     let first_of_next = NaiveDate::from_ymd_opt(next_year, next_month, 1).expect("valid date");
     let first_of_this = NaiveDate::from_ymd_opt(year, month, 1).expect("valid date");
     (first_of_next - first_of_this).num_days() as u32

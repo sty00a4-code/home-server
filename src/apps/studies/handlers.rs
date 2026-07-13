@@ -31,7 +31,11 @@ pub async fn create_semester(
             rusqlite::params![input.label, input.term, input.start_year, input.sort_order],
         )?;
         let id = conn.last_insert_rowid();
-        conn.query_row("SELECT * FROM semesters WHERE id = ?1", [id], Semester::from_row)
+        conn.query_row(
+            "SELECT * FROM semesters WHERE id = ?1",
+            [id],
+            Semester::from_row,
+        )
     })
     .await
     .map(Json)
@@ -43,7 +47,8 @@ pub async fn list_study_programs(
     State(state): State<AppState>,
 ) -> AppResult<Json<Vec<StudyProgram>>> {
     with_db(&state, |conn| {
-        let mut stmt = conn.prepare("SELECT * FROM study_programs ORDER BY is_primary DESC, name")?;
+        let mut stmt =
+            conn.prepare("SELECT * FROM study_programs ORDER BY is_primary DESC, name")?;
         let rows = stmt.query_map([], StudyProgram::from_row)?;
         rows.collect()
     })
@@ -89,19 +94,18 @@ pub async fn list_po_areas(
     State(state): State<AppState>,
     Query(filter): Query<PoAreaFilter>,
 ) -> AppResult<Json<Vec<PoArea>>> {
-    with_db(&state, move |conn| {
-        match filter.study_program_id {
-            Some(sp_id) => {
-                let mut stmt =
-                    conn.prepare("SELECT * FROM po_areas WHERE study_program_id = ?1 ORDER BY name")?;
-                let rows = stmt.query_map([sp_id], PoArea::from_row)?;
-                rows.collect()
-            }
-            None => {
-                let mut stmt = conn.prepare("SELECT * FROM po_areas ORDER BY study_program_id, name")?;
-                let rows = stmt.query_map([], PoArea::from_row)?;
-                rows.collect()
-            }
+    with_db(&state, move |conn| match filter.study_program_id {
+        Some(sp_id) => {
+            let mut stmt =
+                conn.prepare("SELECT * FROM po_areas WHERE study_program_id = ?1 ORDER BY name")?;
+            let rows = stmt.query_map([sp_id], PoArea::from_row)?;
+            rows.collect()
+        }
+        None => {
+            let mut stmt =
+                conn.prepare("SELECT * FROM po_areas ORDER BY study_program_id, name")?;
+            let rows = stmt.query_map([], PoArea::from_row)?;
+            rows.collect()
         }
     })
     .await
@@ -118,7 +122,11 @@ pub async fn create_po_area(
             rusqlite::params![input.study_program_id, input.name, input.lp_required],
         )?;
         let id = conn.last_insert_rowid();
-        conn.query_row("SELECT * FROM po_areas WHERE id = ?1", [id], PoArea::from_row)
+        conn.query_row(
+            "SELECT * FROM po_areas WHERE id = ?1",
+            [id],
+            PoArea::from_row,
+        )
     })
     .await
     .map(Json)
@@ -164,7 +172,11 @@ pub async fn get_module(
     Path(id): Path<i64>,
 ) -> AppResult<Json<Module>> {
     with_db(&state, move |conn| {
-        conn.query_row("SELECT * FROM modules WHERE id = ?1", [id], Module::from_row)
+        conn.query_row(
+            "SELECT * FROM modules WHERE id = ?1",
+            [id],
+            Module::from_row,
+        )
     })
     .await
     .map(Json)
@@ -198,7 +210,11 @@ pub async fn create_module(
             ],
         )?;
         let id = conn.last_insert_rowid();
-        conn.query_row("SELECT * FROM modules WHERE id = ?1", [id], Module::from_row)
+        conn.query_row(
+            "SELECT * FROM modules WHERE id = ?1",
+            [id],
+            Module::from_row,
+        )
     })
     .await
     .map(Json)
@@ -237,7 +253,11 @@ pub async fn update_module(
         if updated == 0 {
             return Err(rusqlite::Error::QueryReturnedNoRows);
         }
-        conn.query_row("SELECT * FROM modules WHERE id = ?1", [id], Module::from_row)
+        conn.query_row(
+            "SELECT * FROM modules WHERE id = ?1",
+            [id],
+            Module::from_row,
+        )
     })
     .await
     .map(Json)
@@ -365,7 +385,8 @@ pub async fn delete_exam(State(state): State<AppState>, Path(id): Path<i64>) -> 
 
 pub async fn summary(State(state): State<AppState>) -> AppResult<Json<Vec<ProgressSummary>>> {
     with_db(&state, |conn| {
-        let mut stmt = conn.prepare("SELECT * FROM v_progress_summary ORDER BY study_program_id")?;
+        let mut stmt =
+            conn.prepare("SELECT * FROM v_progress_summary ORDER BY study_program_id")?;
         let rows = stmt.query_map([], ProgressSummary::from_row)?;
         rows.collect()
     })

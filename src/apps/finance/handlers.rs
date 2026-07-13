@@ -30,7 +30,10 @@ pub async fn create_payment_type(
     Json(input): Json<NewPaymentType>,
 ) -> AppResult<Json<PaymentType>> {
     with_db(&state, move |conn| {
-        conn.execute("INSERT INTO payment_types (name) VALUES (?1)", [&input.name])?;
+        conn.execute(
+            "INSERT INTO payment_types (name) VALUES (?1)",
+            [&input.name],
+        )?;
         let id = conn.last_insert_rowid();
         conn.query_row(
             "SELECT * FROM payment_types WHERE id = ?1",
@@ -60,7 +63,8 @@ pub async fn delete_payment_type(
 
 pub async fn list_categories(State(state): State<AppState>) -> AppResult<Json<Vec<Category>>> {
     with_db(&state, |conn| {
-        let mut stmt = conn.prepare("SELECT * FROM categories ORDER BY parent_id IS NOT NULL, name")?;
+        let mut stmt =
+            conn.prepare("SELECT * FROM categories ORDER BY parent_id IS NOT NULL, name")?;
         let rows = stmt.query_map([], Category::from_row)?;
         rows.collect()
     })
@@ -78,7 +82,11 @@ pub async fn create_category(
             rusqlite::params![input.name, input.parent_id],
         )?;
         let id = conn.last_insert_rowid();
-        conn.query_row("SELECT * FROM categories WHERE id = ?1", [id], Category::from_row)
+        conn.query_row(
+            "SELECT * FROM categories WHERE id = ?1",
+            [id],
+            Category::from_row,
+        )
     })
     .await
     .map(Json)
@@ -97,7 +105,11 @@ pub async fn update_category(
         if updated == 0 {
             return Err(rusqlite::Error::QueryReturnedNoRows);
         }
-        conn.query_row("SELECT * FROM categories WHERE id = ?1", [id], Category::from_row)
+        conn.query_row(
+            "SELECT * FROM categories WHERE id = ?1",
+            [id],
+            Category::from_row,
+        )
     })
     .await
     .map(Json)
@@ -178,7 +190,11 @@ pub async fn create_transaction(
             ],
         )?;
         let id = conn.last_insert_rowid();
-        conn.query_row("SELECT * FROM transactions WHERE id = ?1", [id], Transaction::from_row)
+        conn.query_row(
+            "SELECT * FROM transactions WHERE id = ?1",
+            [id],
+            Transaction::from_row,
+        )
     })
     .await
     .map(Json)
@@ -209,7 +225,11 @@ pub async fn update_transaction(
         if updated == 0 {
             return Err(rusqlite::Error::QueryReturnedNoRows);
         }
-        conn.query_row("SELECT * FROM transactions WHERE id = ?1", [id], Transaction::from_row)
+        conn.query_row(
+            "SELECT * FROM transactions WHERE id = ?1",
+            [id],
+            Transaction::from_row,
+        )
     })
     .await
     .map(Json)
@@ -235,8 +255,8 @@ pub async fn list_scheduled(
     State(state): State<AppState>,
 ) -> AppResult<Json<Vec<ScheduledTransaction>>> {
     with_db(&state, |conn| {
-        let mut stmt =
-            conn.prepare("SELECT * FROM scheduled_transactions ORDER BY active DESC, day_of_month")?;
+        let mut stmt = conn
+            .prepare("SELECT * FROM scheduled_transactions ORDER BY active DESC, day_of_month")?;
         let rows = stmt.query_map([], ScheduledTransaction::from_row)?;
         rows.collect()
     })
@@ -353,9 +373,14 @@ pub async fn summary(State(state): State<AppState>) -> AppResult<Json<Summary>> 
     let month_label = format!("{:04}-{:02}", today.year(), today.month());
 
     let days_in_month = {
-        let (ny, nm) = if today.month() == 12 { (today.year() + 1, 1) } else { (today.year(), today.month() + 1) };
+        let (ny, nm) = if today.month() == 12 {
+            (today.year() + 1, 1)
+        } else {
+            (today.year(), today.month() + 1)
+        };
         let first_next = NaiveDate::from_ymd_opt(ny, nm, 1).expect("valid date");
-        let first_this = NaiveDate::from_ymd_opt(today.year(), today.month(), 1).expect("valid date");
+        let first_this =
+            NaiveDate::from_ymd_opt(today.year(), today.month(), 1).expect("valid date");
         (first_next - first_this).num_days()
     };
     let days_left_in_month = days_in_month - today.day() as i64 + 1;

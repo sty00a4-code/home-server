@@ -125,7 +125,11 @@ pub async fn view_file(
     serve_path(state, q.path, Disposition::Inline).await
 }
 
-async fn serve_path(state: AppState, path: String, disposition: Disposition) -> AppResult<Response> {
+async fn serve_path(
+    state: AppState,
+    path: String,
+    disposition: Disposition,
+) -> AppResult<Response> {
     if path.is_empty() {
         return Err(AppError::BadRequest("path is required".into()));
     }
@@ -163,12 +167,16 @@ async fn serve_path(state: AppState, path: String, disposition: Disposition) -> 
     let mut headers = HeaderMap::new();
     headers.insert(
         header::CONTENT_TYPE,
-        HeaderValue::from_str(mime.as_ref()).unwrap_or(HeaderValue::from_static("application/octet-stream")),
+        HeaderValue::from_str(mime.as_ref())
+            .unwrap_or(HeaderValue::from_static("application/octet-stream")),
     );
     headers.insert(
         header::CONTENT_DISPOSITION,
-        HeaderValue::from_str(&format!("{}; filename=\"{filename}\"", disposition.as_str()))
-            .unwrap_or(HeaderValue::from_static("attachment")),
+        HeaderValue::from_str(&format!(
+            "{}; filename=\"{filename}\"",
+            disposition.as_str()
+        ))
+        .unwrap_or(HeaderValue::from_static("attachment")),
     );
     headers.insert(header::CONTENT_LENGTH, HeaderValue::from(meta.len()));
 
@@ -193,13 +201,19 @@ async fn download_directory_as_zip(dir: std::path::PathBuf) -> AppResult<Respons
         .map_err(|e| AppError::Other(anyhow::anyhow!("zip task failed: {e}")))??;
 
     let mut headers = HeaderMap::new();
-    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/zip"));
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/zip"),
+    );
     headers.insert(
         header::CONTENT_DISPOSITION,
         HeaderValue::from_str(&format!("attachment; filename=\"{base_name}.zip\""))
             .unwrap_or(HeaderValue::from_static("attachment")),
     );
-    headers.insert(header::CONTENT_LENGTH, HeaderValue::from(bytes.len() as u64));
+    headers.insert(
+        header::CONTENT_LENGTH,
+        HeaderValue::from(bytes.len() as u64),
+    );
 
     Ok((headers, Body::from(bytes)).into_response())
 }
@@ -287,10 +301,7 @@ pub async fn upload_file(
     Ok(Json(UploadResponse { uploaded }))
 }
 
-pub async fn make_dir(
-    State(state): State<AppState>,
-    Query(q): Query<PathQuery>,
-) -> AppResult<()> {
+pub async fn make_dir(State(state): State<AppState>, Query(q): Query<PathQuery>) -> AppResult<()> {
     if q.path.is_empty() {
         return Err(AppError::BadRequest("path is required".into()));
     }
@@ -326,8 +337,7 @@ pub async fn move_entry(
 
     if !q.overwrite && fs::metadata(&to).await.is_ok() {
         return Err(AppError::BadRequest(
-            "something already exists at the destination; pass overwrite=true to replace it"
-                .into(),
+            "something already exists at the destination; pass overwrite=true to replace it".into(),
         ));
     }
 
@@ -341,9 +351,7 @@ pub async fn move_entry(
         // Covers the case where root_dir spans multiple filesystems/mounts,
         // where a plain rename can't work.
         if e.raw_os_error() == Some(18) {
-            AppError::BadRequest(
-                "can't move across filesystems; copy and delete instead".into(),
-            )
+            AppError::BadRequest("can't move across filesystems; copy and delete instead".into())
         } else {
             AppError::Io(e)
         }

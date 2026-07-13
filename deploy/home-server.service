@@ -8,26 +8,25 @@
 
 [Unit]
 Description=home-server (personal file server)
-After=network.target
+After=network.target local-fs.target
+RequiresMountsFor=/mnt/usb
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/home-server
-ExecStart=/home/pi/home-server/target/release/home-server
+User=sty00a4
+Group=sty00a4
+WorkingDirectory=/home/sty00a4/home-server
+ExecStart=/home/sty00a4/home-server/start.sh
 Restart=on-failure
 RestartSec=2
 Environment=RUST_LOG=info
-# Uncomment once you're exposing this beyond your trusted LAN:
-# Environment=HOME_SERVER__AUTH__TOKEN=change-me
 
 # --- light sandboxing ---
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/home/pi/home-server/data
+ReadWritePaths=/mnt/usb/ /home/sty00a4/home-server
 
 [Install]
 WantedBy=multi-user.target

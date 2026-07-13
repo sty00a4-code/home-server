@@ -62,13 +62,13 @@ impl Settings {
             .set_default("server.host", "0.0.0.0")?
             .set_default("server.port", 8080)?
             .set_default("files.root_dir", "./data")?
-            .set_default("files.max_upload_mb", 1024)?
+            .set_default("files.max_upload_mb", 512000)?
             .set_default::<_, Option<String>>("auth.token", None)?
             .set_default("studies.db_path", "./data/studies.db")?
             .set_default("finance.db_path", "./data/finance.db")?
             .set_default("finance.schedule_check_interval_hours", 6)?
             // Optional file, entirely fine if it doesn't exist.
-            .add_source(config::File::with_name("config/default").required(false))
+            .add_source(config::File::with_name("config/default.toml").required(true))
             // Env vars win over everything, e.g.:
             //   HOME_SERVER__SERVER__PORT=9000
             //   HOME_SERVER__AUTH__TOKEN=supersecret
